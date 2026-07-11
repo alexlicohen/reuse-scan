@@ -1,0 +1,14 @@
+name: check
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: shellcheck
+        run: shellcheck reuse_scan.sh test/run.sh
+      - name: tests
+        run: bash test/run.sh
