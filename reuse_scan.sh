@@ -8,7 +8,13 @@
 #         - every top-level scripts/, bin/, tools/ dir directly under ~/projects/*/
 #         - ~/.claude/scripts/
 #         - ~/.claude/skills/*/scripts/
-#         - ~/.claude/skills/*/SKILL.md  (each file is its own entry, not a directory root)
+#         - ~/.agents/skills/*/scripts/
+#         - ~/.local/bin (top-level executable files only)
+#         - ~/.claude/skills/*/SKILL.md, ~/.agents/skills/*/SKILL.md
+#           (each file is its own entry, not a directory root)
+#       A skill reachable through both ~/.claude/skills/<name> and
+#       ~/.agents/skills/<name> (e.g. a symlink between them) is indexed once: default
+#       roots/SKILL.md paths are de-duplicated by resolved real path before scanning.
 #       With args, uses exactly those roots instead (the test seam — a fixture tree can
 #       be passed here so the suite never touches the real filesystem). Each root that is
 #       a directory is scanned non-recursively for top-level files (kind=script); each
@@ -181,12 +187,60 @@ default_roots() {   # print one root path per line (dirs to scan for scripts)
     [ -d "$skdir" ] || continue
     [ -d "${skdir}scripts" ] && printf '%s\n' "${skdir}scripts"
   done
+  for skdir in "$HOME"/.agents/skills/*/; do
+    [ -d "$skdir" ] || continue
+    [ -d "${skdir}scripts" ] && printf '%s\n' "${skdir}scripts"
+  done
+  # Executable-only root: ~/.local/bin mixes scripts with non-executable config/data,
+  # so this one root is filtered to top-level executables in the scan loop below
+  # (see $local_bin_root), rather than indexing every file it contains.
+  [ -d "$HOME/.local/bin" ] && printf '%s\n' "$HOME/.local/bin"
 }
 
 default_skill_mds() {   # print one SKILL.md path per line
   local f
   for f in "$HOME"/.claude/skills/*/SKILL.md; do
     [ -f "$f" ] && printf '%s\n' "$f"
+  done
+  for f in "$HOME"/.agents/skills/*/SKILL.md; do
+    [ -f "$f" ] && printf '%s\n' "$f"
+  done
+}
+
+resolve_path() {   # $1=path -> canonicalized absolute path (symlinks resolved), best-effort
+  local p="$1" dir base resolved
+  if [ -d "$p" ]; then
+    resolved=$(cd -P "$p" 2>/dev/null && pwd -P) && printf '%s\n' "$resolved"
+  elif [ -e "$p" ]; then
+    dir=$(dirname "$p")
+    base=$(basename "$p")
+    resolved=$(cd -P "$dir" 2>/dev/null && pwd -P) && printf '%s/%s\n' "$resolved" "$base"
+  fi
+}
+
+already_seen() {   # $1=candidate, remaining args = already-seen list -> 0 if present
+  local cand="$1" s
+  shift
+  for s in "$@"; do
+    [ "$s" = "$cand" ] && return 0
+  done
+  return 1
+}
+
+dedup_paths() {   # reads paths on stdin, prints them back with duplicates removed —
+                   # "duplicate" means two input paths resolve to the same real path
+                   # (e.g. a skill reachable both directly and through a symlinked
+                   # skills dir), so it's indexed once no matter how many of its
+                   # candidate roots reach it.
+  local p rp
+  local seen=()
+  while IFS= read -r p; do
+    [ -n "$p" ] || continue
+    rp=$(resolve_path "$p")
+    [ -n "$rp" ] || rp="$p"
+    already_seen "$rp" ${seen[@]+"${seen[@]}"} && continue
+    seen+=("$rp")
+    printf '%s\n' "$p"
   done
 }
 
@@ -198,12 +252,13 @@ do_build() {
   if [ "$#" -gt 0 ]; then
     roots=("$@")
   else
-    while IFS= read -r r; do roots+=("$r"); done < <(default_roots)
-    while IFS= read -r r; do roots+=("$r"); done < <(default_skill_mds)
+    while IFS= read -r r; do roots+=("$r"); done < <(default_roots | dedup_paths)
+    while IFS= read -r r; do roots+=("$r"); done < <(default_skill_mds | dedup_paths)
   fi
 
   local entries=() dup_lines=() n_scripts=0 n_skills=0
   local root f name purpose kind path esc_path esc_name esc_purpose
+  local local_bin_root="$HOME/.local/bin"
 
   # ${roots[@]+"${roots[@]}"} (not "${roots[@]}") — under bash 3.2 with `set -u`,
   # expanding an EMPTY array's @ elements is treated as an unbound-variable error, not
@@ -229,6 +284,7 @@ do_build() {
       root="${root%/}"
       for f in "$root"/*; do
         [ -f "$f" ] || continue
+        if [ "$root" = "$local_bin_root" ] && [ ! -x "$f" ]; then continue; fi
         path="$f"
         name=$(basename "$path")
         purpose=$(script_purpose "$path")

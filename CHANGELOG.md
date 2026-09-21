@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.1.0 — 2026-09-20
+
+Shared with the Codex CLI, not just Claude Code.
+
+- **`SKILL.md` frontmatter fixed**: `description` is now a folded block scalar
+  (`description: >-`), so it parses under a strict YAML loader — the old plain scalar
+  had a bare `Triggers: "..."` colon-space sequence that a strict parser rejects
+  (today's own regex-based frontmatter reader tolerated it by accident).
+- **Client-neutral wording**: "Claude Code" as the assumed acting agent is now "the
+  active agent" in `SKILL.md`/`README.md`; install paths describe the skill living at
+  `~/.agents/skills/reuse-scan` with `reuse-scan` on `PATH`, reached from
+  `~/.claude/skills/reuse-scan` via a symlink for clients that discover skills there.
+- **New default roots**: `~/.agents/skills/*/scripts`, `~/.agents/skills/*/SKILL.md`,
+  and `~/.local/bin` (top-level executable files only) are now indexed alongside the
+  existing `~/.claude` roots.
+- **De-duplication by resolved real path**: a skill or script reachable through both
+  `~/.claude/skills/<name>` and `~/.agents/skills/<name>` (e.g. a symlink between them)
+  is now indexed exactly once, not twice.
+- **Test fix**: `test/run.sh`'s long-purpose-truncation case had one `--build`
+  invocation missing `REUSE_INDEX_FILE`, so running the suite silently overwrote the
+  real `~/.claude/reuse-index.json` as a side effect — now routed through a throwaway
+  index file like every other case. Added a case covering the new de-duplication
+  (a fake skills dir plus a symlink to it, indexed once), using only tmp dirs.
+
 ## 1.0.0 — 2026-07-11
 
 Initial release of the `reuse-scan` Claude Code skill.

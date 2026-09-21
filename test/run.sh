@@ -145,7 +145,7 @@ echo "long purpose truncation:"
 longcomment=$(printf 'A%.0s' $(seq 1 400))
 mkdir -p "$tmp/proj3/scripts"
 printf '#!/bin/bash\n# %s\necho hi\n' "$longcomment" > "$tmp/proj3/scripts/longpurpose.sh"
-bash "$G" --build "$tmp/proj3/scripts" > /dev/null 2>&1
+REUSE_INDEX_FILE="$tmp/throwaway-index.json" bash "$G" --build "$tmp/proj3/scripts" > /dev/null 2>&1
 REUSE_INDEX_FILE="$tmp/long-index.json" bash "$G" --build "$tmp/proj3/scripts" > /dev/null 2>&1
 json=$(cat "$tmp/long-index.json")
 has "long purpose is truncated with an ellipsis marker" "$json" "..."
@@ -158,6 +158,32 @@ REUSE_INDEX_FILE="$tmp/secret-index.json" bash "$G" --build "$tmp/proj4/scripts"
 json=$(cat "$tmp/secret-index.json")
 has "AWS-style key pattern gets redacted" "$json" "[REDACTED]"
 hasnot "raw key value is not indexed verbatim" "$json" "AKIAABCDEFGHIJKLMNOP"
+
+echo "de-duplication across symlinked skill dirs:"
+dedup_home=$(mktemp -d)
+mkdir -p "$dedup_home/.claude/skills" "$dedup_home/.agents/skills/shared-skill/scripts"
+cat > "$dedup_home/.agents/skills/shared-skill/scripts/tool.sh" <<'EOF'
+#!/bin/bash
+# Shared tool reachable via two skills-dir paths.
+echo hi
+EOF
+cat > "$dedup_home/.agents/skills/shared-skill/SKILL.md" <<'EOF'
+---
+name: shared-skill
+description: A skill reachable via both a real path and a symlink.
+---
+
+# shared-skill
+EOF
+ln -s "$dedup_home/.agents/skills/shared-skill" "$dedup_home/.claude/skills/shared-skill"
+out=$(HOME="$dedup_home" REUSE_INDEX_FILE="$tmp/dedup-index.json" bash "$G" --build 2>&1)
+has "de-dup build reports 1 script + 1 skill, not 2 each" "$out" "Indexed 2 entries (1 scripts, 1 skills)"
+json=$(cat "$tmp/dedup-index.json")
+tool_count=$(printf '%s' "$json" | grep -o '"path":"[^"]*tool\.sh"' | wc -l | tr -d ' ')
+skill_count=$(printf '%s' "$json" | grep -o '"path":"[^"]*shared-skill/SKILL\.md"' | wc -l | tr -d ' ')
+eq "tool.sh indexed exactly once despite two reachable paths" "$tool_count" "1"
+eq "shared-skill/SKILL.md indexed exactly once despite two reachable paths" "$skill_count" "1"
+rm -rf "$dedup_home"
 
 echo "unreadable script:"
 mkdir -p "$tmp/proj5/scripts"

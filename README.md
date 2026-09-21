@@ -2,12 +2,12 @@
 
 [![check](https://github.com/alexlicohen/reuse-scan/actions/workflows/check.yml/badge.svg)](https://github.com/alexlicohen/reuse-scan/actions/workflows/check.yml)
 
-A [Claude Code](https://claude.com/claude-code) skill: a fast local capability index over
+A skill, shared by Claude Code and the Codex CLI: a fast local capability index over
 Alex's own scripts/tools/skills, so that before writing any new script/tool/helper he (or
-Claude Code acting for him) can check whether something equivalent already exists instead
-of re-deriving it.
+the active agent acting for him) can check whether something equivalent already exists
+instead of re-deriving it.
 
-This operationalizes an existing rule in his global `CLAUDE.md` ("reuse before you
+This operationalizes an existing rule in his global agent instructions ("reuse before you
 rebuild... scan the project, its docs, and MEMORY for existing functionality") by turning
 the check into a fast lookup instead of a manual multi-repo grep.
 
@@ -34,7 +34,12 @@ With no args, scans the default roots:
 - every top-level `scripts/`, `bin/`, `tools/` dir directly under each `~/projects/*/`
 - `~/.claude/scripts/`
 - `~/.claude/skills/*/scripts/`
-- `~/.claude/skills/*/SKILL.md` (each file is its own entry, not walked as a directory)
+- `~/.agents/skills/*/scripts/`
+- `~/.local/bin` (top-level executable files only)
+- `~/.claude/skills/*/SKILL.md`, `~/.agents/skills/*/SKILL.md` (each file is its own
+  entry, not walked as a directory). A skill reachable through both — e.g. a symlink
+  from one skills dir into the other — is indexed once, de-duplicated by resolved real
+  path.
 
 For each top-level file in a scripts/bin/tools root (non-recursive), the "purpose" is the
 first header comment line after the shebang, or `(no header comment found)`. For each
@@ -55,10 +60,12 @@ bash reuse_scan.sh --build ~/some-project/scripts ~/some-project/SKILL.md
 ## Install
 
 ```sh
-git clone https://github.com/alexlicohen/reuse-scan.git ~/.claude/skills/reuse-scan
+git clone https://github.com/alexlicohen/reuse-scan.git ~/.agents/skills/reuse-scan
 ```
 
-Claude Code discovers it automatically on the next session.
+Lives at `~/.agents/skills/reuse-scan` with the `reuse-scan` command on `PATH`. Any
+agent that discovers skills under `~/.claude/skills` reaches it through a symlink there
+back to `~/.agents/skills/reuse-scan`.
 
 ## Notes / limits
 

@@ -1,6 +1,15 @@
 ---
 name: reuse-scan
-description: A fast local capability index over Alex's own scripts/tools/skills, so that before writing any new script/tool/helper he (or Claude Code acting for him) can check whether something equivalent already exists instead of re-deriving it. Operationalizes the "reuse before you rebuild" rule in his global CLAUDE.md by making the check a fast lookup instead of a manual multi-repo grep. Use when launching or supervising a task that is about to add a new helper/script/tool. Triggers: "check reuse-scan", "does something like this exist", "before I build a new script", "scan for existing tools", or any time you (Claude Code) are about to write a new helper/script — check first.
+description: >-
+  A fast local capability index over Alex's own scripts/tools/skills, so that before
+  writing any new script/tool/helper he (or the active agent acting for him) can check
+  whether something equivalent already exists instead of re-deriving it. Operationalizes
+  the "reuse before you rebuild" rule in his global agent instructions by making the
+  check a fast lookup instead of a manual multi-repo grep. Use when launching or
+  supervising a task that is about to add a new helper/script/tool. Triggers: "check
+  reuse-scan", "does something like this exist", "before I build a new script", "scan
+  for existing tools", or any time the active agent is about to write a new
+  helper/script — check first.
 ---
 
 # reuse-scan
@@ -13,9 +22,11 @@ becomes a one-line keyword lookup.
 ## Query (the main use — do this before writing a new script)
 
 ```bash
-bash ~/.claude/skills/reuse-scan/reuse_scan.sh <keyword>
+bash ~/.agents/skills/reuse-scan/reuse_scan.sh <keyword>
 # or explicitly:
-bash ~/.claude/skills/reuse-scan/reuse_scan.sh --query <keyword>
+bash ~/.agents/skills/reuse-scan/reuse_scan.sh --query <keyword>
+# or, once ~/.local/bin is on PATH:
+reuse-scan <keyword>
 ```
 
 Case-insensitive substring match against each indexed entry's name, purpose, and path.
@@ -26,15 +37,20 @@ exits 0 — never a hard failure, this is a lookup aid, not a safety gate.
 ## Build / rebuild the index
 
 ```bash
-bash ~/.claude/skills/reuse-scan/reuse_scan.sh --build
+bash ~/.agents/skills/reuse-scan/reuse_scan.sh --build
+# or:
+reuse-scan --build
 ```
 
 Scans, with no args, the DEFAULT roots:
 - every top-level `scripts/`, `bin/`, `tools/` dir directly under each `~/projects/*/`
 - `~/.claude/scripts/`
 - `~/.claude/skills/*/scripts/`
-- `~/.claude/skills/*/SKILL.md` — each file is its own entry (a skill), not walked as a
-  directory
+- `~/.agents/skills/*/scripts/`
+- `~/.local/bin` — top-level executable files only (not everything it contains)
+- `~/.claude/skills/*/SKILL.md`, `~/.agents/skills/*/SKILL.md` — each file is its own
+  entry (a skill), not walked as a directory. A skill reachable through both (e.g. a
+  symlink from one skills dir into the other) is indexed once, by resolved real path.
 
 For each top-level script file found in a scripts/bin/tools root (non-recursive), the
 "purpose" is the first header comment line after the shebang (fallback:
@@ -62,8 +78,12 @@ freshness check; it's a snapshot, not a live watch.
 ## Install
 
 ```sh
-git clone https://github.com/alexlicohen/reuse-scan.git ~/.claude/skills/reuse-scan
+git clone https://github.com/alexlicohen/reuse-scan.git ~/.agents/skills/reuse-scan
 ```
+
+The `reuse-scan` command on `PATH` (typically a wrapper in `~/.local/bin`) points at
+this checkout. Any agent that discovers skills under `~/.claude/skills` reaches it
+through a symlink there back to `~/.agents/skills/reuse-scan`.
 
 ## Notes / limits
 
