@@ -14,8 +14,8 @@ description: >-
 
 # reuse-scan
 
-Alex's global CLAUDE.md already says: "Reuse before you rebuild... scan the project,
-its docs, and MEMORY for existing functionality." That's a manual, multi-repo grep every
+Alex's global agent instructions (`~/.agents/AGENTS.md` › Working style) already say:
+reuse before you rebuild, and scan the project, its docs and memory first. That's a manual, multi-repo grep every
 time. This skill builds a flat index of his scripts/tools/skills once, so the check
 becomes a one-line keyword lookup.
 
@@ -72,7 +72,7 @@ freshness check; it's a snapshot, not a live watch.
 - **Before writing any new script/helper/tool** — query first, build only if the index
   looks stale or missing.
 - When told to "scan for existing tools" or asked "does something like this exist".
-- As part of the standing CLAUDE.md reuse rule, whenever a task would add a new code path
+- As part of the standing reuse rule in `~/.agents/AGENTS.md`, whenever a task would add a new code path
   that might already be covered.
 
 ## Install

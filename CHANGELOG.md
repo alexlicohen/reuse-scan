@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 — 2026-10-03
+
+- `SKILL.md`: the reuse rule is cited from `~/.agents/AGENTS.md` › Working style (it moved
+  out of the global CLAUDE.md); no behaviour change.
+
 ## 1.1.0 — 2026-09-20
 
 Shared with the Codex CLI, not just Claude Code.
