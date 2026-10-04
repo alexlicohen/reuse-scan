@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 — 2026-10-04
+
+- Description trimmed from 721 B to ~260 B (it loads in every session's skill listing).
+
 ## 1.1.1 — 2026-10-03
 
 - `SKILL.md`: the reuse rule is cited from `~/.agents/AGENTS.md` › Working style (it moved

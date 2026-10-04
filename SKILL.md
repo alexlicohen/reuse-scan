@@ -1,15 +1,9 @@
 ---
 name: reuse-scan
 description: >-
-  A fast local capability index over Alex's own scripts/tools/skills, so that before
-  writing any new script/tool/helper he (or the active agent acting for him) can check
-  whether something equivalent already exists instead of re-deriving it. Operationalizes
-  the "reuse before you rebuild" rule in his global agent instructions by making the
-  check a fast lookup instead of a manual multi-repo grep. Use when launching or
-  supervising a task that is about to add a new helper/script/tool. Triggers: "check
-  reuse-scan", "does something like this exist", "before I build a new script", "scan
-  for existing tools", or any time the active agent is about to write a new
-  helper/script — check first.
+  Before writing any new script/tool/helper, look up Alex's local capability index for an
+  existing equivalent (`reuse-scan <keyword>`, `--build` if stale). Triggers: "check
+  reuse-scan", "does something like this exist", or an agent about to write a new helper.
 ---
 
 # reuse-scan
